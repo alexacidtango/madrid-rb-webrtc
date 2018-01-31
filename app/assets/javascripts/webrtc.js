@@ -2,81 +2,96 @@
 * Webrtc
 * @class Webrtc
 */
+
+// BROADCAST TYPES
+var JOIN_ROOM = "JOIN_ROOM";
+var EXCHANGE = "EXCHANGE";
+var REMOVE_USER = "REMOVE_USER";
+
+
+// CONFIG
+var iceCreds = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+// var iceCreds = JSON.parse(document.getElementById("xirsys-creds").dataset.xirsys);
+// iceCreds = JSON.parse(iceCreds)["v"];
+
+var currentUser = null;
+
+// HTML Elements
+var selfView = [];
+var remoteViewContainer = [];
+var joinBtnContainer = [];
+var leaveBtnContainer = [];
+
+// GLOBAL OBJECTS
+var pcPeers = {};
+var localStream = void 0;
+
+var pc = null;
+
 var deps = [
   "Cable"
 ];
 
 modulejs.define('Webrtc', deps, function (Cable) {
   var Webrtc = {
-    currentUser: null,
-    selfView: [],
-    remoteViewContainer: [],
-    joinBtnContainer: [],
-    leaveBtnContainer: [],
 
     init: function() {
       var that = this;
 
-      // CONFIG
-      var iceCreds = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
-      // var iceCreds = JSON.parse(document.getElementById("xirsys-creds").dataset.xirsys);
-      // iceCreds = JSON.parse(iceCreds)["v"];
-
       var constraints = {
-        audio: false,
+        audio: true,
         video: true
       };
 
-      // GLOBAL OBJECTS
-      var pcPeers = {};
-      var localStream = void 0;
 
-      that.currentUser = document.getElementById("currentUser");
-      that.selfView = document.getElementById("selfView");
-      that.remoteViewContainer = document.getElementById("remoteViewContainer");
-      that.joinBtnContainer = document.getElementById("joinBtnContainer");
-      that.leaveBtnContainer = document.getElementById("leaveBtnContainer");
+      currentUser = document.getElementById("currentUser").getAttribute("data-user");
+      selfView = document.getElementById("selfView");
+      remoteViewContainer = document.getElementById("remoteViewContainer");
+      joinBtnContainer = document.getElementById("joinBtnContainer");
+      leaveBtnContainer = document.getElementById("leaveBtnContainer");
 
       $(document).on('click', '#joinSession', that.joinSession);
       $(document).on('click', '#leaveSession', that.leaveSession);
 
       navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
         localStream = stream;
-        console.log(that.selfView);
-        that.selfView.srcObject = stream;
-        that.selfView.muted = true;
+        selfView.srcObject = stream;
+        selfView.muted = true;
       }).catch(that.logError);
 
-    },
-    connected: function() {
-      return connectUser(currentUser);
-    },
-
-    received: function received(data) {
-      console.log("received", data);
-      if (data.from === currentUser) return;
-      switch (data.type) {
-        case JOIN_ROOM:
-          return joinRoom(data);
-        case EXCHANGE:
-          if (data.to !== currentUser) return;
-          return exchange(data);
-        case REMOVE_USER:
-          return removeUser(data);
-        default:
-          return;
-      }
     },
 
     joinSession: function() {
       var that = this;
       Cable.init();
-      App.session = App.cable.subscriptions.create("SessionChannel", this);
-      Webrtc.joinBtnContainer.style.display = "none";
-      Webrtc.leaveBtnContainer.style.display = "block";
+      App.session = App.cable.subscriptions.create("SessionChannel", {
+        connected: function() {
+          var that = this;
+          return Webrtc.connectUser(currentUser);
+        },
+        received: function received(data) {
+          console.log("received", data);
+          if (data.from === currentUser) return;
+          switch (data.type) {
+            case JOIN_ROOM:
+              return Webrtc.joinRoom(data);
+            case EXCHANGE:
+              if (data.to !== currentUser) return;
+              return Webrtc.exchange(data);
+            case REMOVE_USER:
+              return Webrtc.removeUser(data);
+            default:
+              return;
+          }
+        }
+      });
+
+      joinBtnContainer.style.display = "none";
+      leaveBtnContainer.style.display = "block";
     },
 
     leaveSession: function() {
+      var that = this;
       for (user in pcPeers) {
         pcPeers[user].close();
       }
@@ -84,26 +99,28 @@ modulejs.define('Webrtc', deps, function (Cable) {
 
       App.session.unsubscribe();
 
-      Webrtc.remoteViewContainer.innerHTML = "";
+      remoteViewContainer.innerHTML = "";
 
-      broadcastData({
+      that.broadcastData({
         type: REMOVE_USER,
         from: currentUser
       });
 
-      Webrtc.joinBtnContainer.style.display = "block";
-      Webrtc.leaveBtnContainer.style.display = "none";
+      joinBtnContainer.style.display = "block";
+      leaveBtnContainer.style.display = "none";
     },
 
     connectUser: function(userId) {
-      broadcastData({
+      var that = this;
+      that.broadcastData({
         type: JOIN_ROOM,
         from: currentUser
       });
     },
 
     joinRoom: function(data) {
-      createPC(data.from, true);
+      var that = this;
+      that.createPC(data.from, true);
     },
 
     removeUser: function(data) {
@@ -114,22 +131,22 @@ modulejs.define('Webrtc', deps, function (Cable) {
     },
 
     createPC: function(userId, isOffer) {
-      var pc = new RTCPeerConnection(iceCreds);
+      pc = new RTCPeerConnection(iceCreds);
       pcPeers[userId] = pc;
       pc.addStream(localStream);
 
       isOffer && pc.createOffer().then(function (offer) {
         pc.setLocalDescription(offer);
-        broadcastData({
+        Webrtc.broadcastData({
           type: EXCHANGE,
           from: currentUser,
           to: userId,
           sdp: JSON.stringify(pc.localDescription)
         });
-      }).catch(logError);
+      }).catch(Webrtc.logError);
 
       pc.onicecandidate = function (event) {
-        event.candidate && broadcastData({
+        event.candidate && Webrtc.broadcastData({
           type: EXCHANGE,
           from: currentUser,
           to: userId,
@@ -138,18 +155,17 @@ modulejs.define('Webrtc', deps, function (Cable) {
       };
 
       pc.onaddstream = function (event) {
-        console.log(event);
         var element = document.createElement("video");
         element.id = "remoteView+" + userId;
         element.autoplay = "autoplay";
         element.srcObject = event.stream;
-        Webrtc.remoteViewContainer.appendChild(element);
+        remoteViewContainer.appendChild(element);
       };
 
       pc.oniceconnectionstatechange = function (event) {
         if (pc.iceConnectionState == "disconnected") {
           console.log("Disconnected:", userId);
-          broadcastData({
+          Webrtc.broadcastData({
             type: REMOVE_USER,
             from: userId
           });
@@ -160,10 +176,11 @@ modulejs.define('Webrtc', deps, function (Cable) {
     },
 
     exchange: function(data) {
+      var that = this;
       var pc = void 0;
 
       if (!pcPeers[data.from]) {
-        pc = createPC(data.from, false);
+        pc = that.createPC(data.from, false);
       } else {
         pc = pcPeers[data.from];
       }
@@ -171,7 +188,7 @@ modulejs.define('Webrtc', deps, function (Cable) {
       if (data.candidate) {
         pc.addIceCandidate(new RTCIceCandidate(JSON.parse(data.candidate))).then(function () {
           return console.log("Ice candidate added");
-        }).catch(logError);
+        }).catch(Webrtc.logError);
       }
 
       if (data.sdp) {
@@ -180,7 +197,7 @@ modulejs.define('Webrtc', deps, function (Cable) {
           if (sdp.type === "offer") {
             pc.createAnswer().then(function (answer) {
               pc.setLocalDescription(answer);
-              broadcastData({
+              Webrtc.broadcastData({
                 type: EXCHANGE,
                 from: currentUser,
                 to: data.from,
@@ -188,11 +205,12 @@ modulejs.define('Webrtc', deps, function (Cable) {
               });
             });
           }
-        }).catch(logError);
+        }).catch(Webrtc.logError);
       }
     },
 
     broadcastData: function(data) {
+      console.log(data);
       $.ajax({
         url: "sessions",
         type: "post",

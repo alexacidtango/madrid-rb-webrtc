@@ -1,5 +1,14 @@
-h1 Madrid RB Server
-video#selfView autoplay=""
+h1 Madrid RB
+
+p#currentUser = "Random user id: #{@random_number}"
+
 #remoteViewContainer
-button onclick="joinSession();"  Join Session
-button onclick="leaveSession();"  Leave Session
+#localViewContainer
+video#selfView autoplay=""
+
+#joinBtnContainer
+  button#joinSession Join Room
+
+#leaveBtnContainer
+  button#joinSession Leave Room
+

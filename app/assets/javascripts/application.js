@@ -5,6 +5,7 @@
 //= require turbolinks
 //= require action_cable
 //= require webrtc
+//= require vendor/get_stats
 //= require cable
 
 function init() {

@@ -1,14 +1,19 @@
-h1 Madrid RB
+h1 Demo Webrtc Madrid RB
+= image_tag "rtclogo.png"
 
-p#currentUser data-user="#{@random_number}" = "Random user id: #{@random_number}"
-
+p Estos son ellos
 #remoteViewContainer
+
+p#currentUser data-user="#{@random_number}" = "Este soy yo y mi id: #{@random_number}"
+#webrtc_conf data-ice-servers="#{@ice_servers}"
+
+
 #localViewContainer
-video#selfView autoplay=""
+  video#selfView autoplay=""
 
 #joinBtnContainer
-  button#joinSession Join Room
+  button#joinSession Entrar
 
 #leaveBtnContainer
-  button#joinSession Leave Room
+  button#joinSession Salir
 

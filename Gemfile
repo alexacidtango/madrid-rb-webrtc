@@ -27,6 +27,8 @@ gem 'jbuilder', '~> 2.5'
 gem 'jquery-rails', '~> 4.1', '>= 4.1.1'
 gem 'modulejs-rails', '~> 2.2'
 gem 'rack-cors', '~> 0.4.0'
+gem 'httparty', '~> 0.13.7'
+gem 'pry-rails', '~> 0.3.4'
 
 # Use Redis adapter to run Action Cable in production
 # gem 'redis', '~> 3.0'

@@ -1,0 +1,28 @@
+body {
+  text-align: center;
+  font-family: Arial;
+  background-color: black;
+  color: white;
+}
+
+button {
+  color: black;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 20px;
+}
+
+p {
+  font-size: 20px;
+  font-weight: bold;
+}
+#remoteViewContainer, #localViewContainer{
+  text-align: center;
+
+  video {
+    display: inline-block;
+    padding: 20px 20px;
+  }
+}

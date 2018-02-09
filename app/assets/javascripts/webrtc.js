@@ -11,8 +11,6 @@ var REMOVE_USER = "REMOVE_USER";
 
 // CONFIG
 var iceCreds = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
-// var iceCreds = JSON.parse(document.getElementById("xirsys-creds").dataset.xirsys);
-// iceCreds = JSON.parse(iceCreds)["v"];
 
 var currentUser = null;
 
@@ -49,6 +47,12 @@ modulejs.define('Webrtc', deps, function (Cable) {
       remoteViewContainer = document.getElementById("remoteViewContainer");
       joinBtnContainer = document.getElementById("joinBtnContainer");
       leaveBtnContainer = document.getElementById("leaveBtnContainer");
+
+      joinBtnContainer.style.display = "block";
+      leaveBtnContainer.style.display = "none";
+
+      iceCreds = JSON.parse(document.getElementById("webrtc_conf").getAttribute("data-ice-servers"));
+      console.log(iceCreds);
 
       $(document).on('click', '#joinSession', that.joinSession);
       $(document).on('click', '#leaveSession', that.leaveSession);
@@ -131,7 +135,9 @@ modulejs.define('Webrtc', deps, function (Cable) {
     },
 
     createPC: function(userId, isOffer) {
+      console.log(iceCreds);
       pc = new RTCPeerConnection(iceCreds);
+
       pcPeers[userId] = pc;
       pc.addStream(localStream);
 
@@ -192,6 +198,7 @@ modulejs.define('Webrtc', deps, function (Cable) {
       }
 
       if (data.sdp) {
+        console.log(data.sdp);
         sdp = JSON.parse(data.sdp);
         pc.setRemoteDescription(new RTCSessionDescription(sdp)).then(function () {
           if (sdp.type === "offer") {
